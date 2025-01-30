@@ -1,8 +1,7 @@
 import os
 import sys
 import tkinter as tk
-from transcriber import WhisperTranscriber
-
+from transcriber import WhisperTranscriber, TranscriberGUI
 
 def get_base_path():
     if getattr(sys, "frozen", False):
@@ -10,8 +9,8 @@ def get_base_path():
     else:
         return os.path.dirname(os.path.abspath(__file__))
 
-
 if __name__ == "__main__":
     root = tk.Tk()
-    app = WhisperTranscriber(root, get_base_path())
+    transcriber = WhisperTranscriber(get_base_path())
+    app = TranscriberGUI(root, transcriber)
     root.mainloop()

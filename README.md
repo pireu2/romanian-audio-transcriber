@@ -2,7 +2,19 @@
 
 A desktop application for transcribing Romanian audio files to text using whisper.cpp and FFmpeg. Works **100% offline** .
 
-![App Screenshot](media/screenshot.png) <!-- Replace with actual screenshot path -->
+![App Screenshot](media/screenshot.png)
+
+## 📑 Table of Contents
+
+- [Project Structure](#-project-structure)
+- [Key Features](#-key-features)
+- [Prerequisites](#-prerequisites)
+- [Installation & Build](#-installation--build)
+- [Model Management](#-model-management)
+- [Usage Guide](#-usage-guide)
+- [Deployment](#-deployment)
+- [License](#-license)
+- [TODO](#-todo)
 
 ## 📂 Project Structure
 
@@ -106,6 +118,15 @@ Output executable located in /dist with:
 - Complete Romanian language support
 - Embedded FFmpeg binaries
 - Selected whisper.cpp model
+
+## ✅ TODO
+
+- <input disabled="" type="checkbox"> Add more unit tests for the transcription logic
+- <input disabled="" type="checkbox"> Implement performance testing for long audio files
+- <input disabled="" type="checkbox"> Explore GPU implementation for faster transcription
+- <input disabled="" type="checkbox"> Improve error handling and user feedback
+- <input disabled="" type="checkbox"> Add a progress bar for the transcription process
+- <input disabled="" type="checkbox"> Create a detailed user manual
 
 ## 📜 License
 
