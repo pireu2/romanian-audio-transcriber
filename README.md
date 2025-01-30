@@ -13,8 +13,9 @@ A desktop application for transcribing Romanian audio files to text using whispe
 - [Model Management](#-model-management)
 - [Usage Guide](#-usage-guide)
 - [Deployment](#-deployment)
-- [License](#-license)
 - [TODO](#-todo)
+- [License](#-license)
+
 
 ## 📂 Project Structure
 
