@@ -43,8 +43,13 @@ class WhisperTranscriber:
         self.model = MODEL_CONFIG["name"]
 
         self.model_path = os.path.join(self.whisper_path, "models", f"ggml-{self.model}.bin")
-        self.main_executable = os.path.join(self.whisper_path, "build", "bin", "Release", "whisper-cli.exe")
-        self.download_model_command_path = os.path.join(self.whisper_path, "models", "download-ggml-model")
+
+        if platform.system() == "Windows":
+            self.main_executable = os.path.join(self.whisper_path, "build", "bin", "Release", "whisper-cli.exe")
+            self.download_model_command_path = os.path.join(self.whisper_path, "models", "download-ggml-model.cmd")
+        else:
+            self.main_executable = os.path.join(self.whisper_path, "build", "bin", "whisper-cli")
+            self.download_model_command_path = os.path.join(self.whisper_path, "models", "download-ggml-model.sh")
 
     def verify_setup(self) -> ModelStatus:
         """Verify if the required files are present"""
@@ -58,13 +63,9 @@ class WhisperTranscriber:
 
     def download_model(self):
         """Download the required model"""
-        if platform.system() == "Windows":
-            command = f"{self.download_model_command_path}.cmd {self.model}"
-        else:
-            command = f"sh {self.download_model_command_path}.sh {self.model}"
 
         subprocess.run(
-            f"cd {self.whisper_path} && {command}",
+            f"cd {self.whisper_path} && {self.download_model_command_path} {self.model}",
             shell=True,
         )
 
