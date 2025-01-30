@@ -39,7 +39,7 @@ class WhisperTranscriber:
     def init_paths(self):
         """Initialize the paths for the required files"""
         self.whisper_path = os.path.join(self.base_path, "whisper.cpp")
-        self.ffmpeg_path = os.path.join(self.base_path, "vendor", "ffmpeg", "ffmpeg.exe")
+        
         self.model = MODEL_CONFIG["name"]
 
         self.model_path = os.path.join(self.whisper_path, "models", f"ggml-{self.model}.bin")
@@ -47,9 +47,11 @@ class WhisperTranscriber:
         if platform.system() == "Windows":
             self.main_executable = os.path.join(self.whisper_path, "build", "bin", "Release", "whisper-cli.exe")
             self.download_model_command_path = os.path.join(self.whisper_path, "models", "download-ggml-model.cmd")
+            self.ffmpeg_path = os.path.join(self.base_path, "vendor", "ffmpeg", "ffmpeg.exe")
         else:
             self.main_executable = os.path.join(self.whisper_path, "build", "bin", "whisper-cli")
             self.download_model_command_path = os.path.join(self.whisper_path, "models", "download-ggml-model.sh")
+            self.ffmpeg_path = os.path.join(self.base_path, "vendor", "ffmpeg", "ffmpeg")
 
     def verify_setup(self) -> ModelStatus:
         """Verify if the required files are present"""

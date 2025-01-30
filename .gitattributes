@@ -1,1 +1,2 @@
 vendor/ffmpeg/ffmpeg.exe filter=lfs diff=lfs merge=lfs -text
+vendor/ffmpeg/ffmpeg filter=lfs diff=lfs merge=lfs -text
