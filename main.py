@@ -18,38 +18,124 @@ class WhisperTranscriber:
         self.create_widgets()
         self.verify_setup()
 
-
     def create_widgets(self):
-        """Create GUI components"""
-        main_frame = ttk.Frame(self.root, padding=10)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        """Create GUI components with modern blue theme"""
+        # Configure style
+        style = ttk.Style()
+        style.theme_use('clam')
+
+        # Color palette
+        primary_color = "#2A3F54"      # Dark blue
+        secondary_color = "#3498db"    # Bright blue
+        background_color = "#f0f4f7"   # Light gray-blue
+        text_color = "#ffffff"         # White
+        accent_color = "#2980b9"       # Darker blue
+
+        self.root.minsize(500, 500)
+
+        # Configure styles
+        style.configure('TFrame', background=background_color)
+        style.configure('TLabel', background=background_color, foreground=primary_color, font=('Segoe UI', 10))
+        style.configure('TButton', 
+                    font=('Segoe UI', 10, 'bold'),
+                    borderwidth=0,
+                    background=secondary_color,
+                    foreground=text_color,
+                    padding=8, 
+                    width=0)
+        style.map('TButton',
+                background=[('active', accent_color), ('disabled', '#bdc3c7')],
+                foreground=[('disabled', '#7f8c8d')])
+
+        style.configure('Header.TFrame', background=primary_color)
+        style.configure('Header.TLabel', 
+                    background=primary_color, 
+                    foreground=text_color,
+                    font=('Segoe UI', 14, 'bold'))
+
+        style.configure('Status.TLabel', 
+                    font=('Segoe UI', 10, 'italic'),
+                    foreground=accent_color)
+
+        # Main container
+
+        background = ttk.Frame(self.root)
+        background.pack(fill=tk.BOTH, expand=True)
+
+        main_frame = ttk.Frame(background)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=100, pady=20)
+
+        # Header section
+        header_frame = ttk.Frame(main_frame, style='Header.TFrame')
+        header_frame.pack(fill=tk.X, pady=(0, 20))
+        ttk.Label(header_frame, 
+                text="Romanian Audio Transcriber", 
+                style='Header.TLabel'
+                ).pack(pady=15, padx=20, anchor=tk.CENTER)
+
+        # Content section
+        content_frame = ttk.Frame(main_frame)
+        content_frame.pack(fill=tk.BOTH, expand=True)
 
         # File selection section
-        ttk.Label(main_frame, text="Select Audio File:").grid(row=0, column=0, sticky=tk.W)
-        self.btn_select = ttk.Button(main_frame, text="Browse...", command=self.select_file)
-        self.btn_select.grid(row=0, column=1, padx=5)
+        file_frame = ttk.Frame(content_frame)
+        file_frame.pack(fill=tk.X, pady=10)
 
-        self.lbl_selected_file = ttk.Label(main_frame, text="No file selected")
-        self.lbl_selected_file.grid(row=1, column=0, columnspan=2, sticky=tk.W)
+        ttk.Label(file_frame, 
+                text="1. Select Audio File:", 
+                font=('Segoe UI', 11, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=5)
 
-        # Output selection section
-        ttk.Label(main_frame, text="Output File:").grid(row=2, column=0, sticky=tk.W, pady=(10,0))
-        self.btn_choose_output = ttk.Button(main_frame, text="Choose Location...", command=self.choose_output)
-        self.btn_choose_output.grid(row=2, column=1, padx=5, pady=(10,0))
+        self.btn_select = ttk.Button(file_frame, 
+                                    text="Browse Audio File", 
+                                    command=self.select_file)
+        self.btn_select.grid(row=1, column=0, sticky="ew", ipadx=20)
 
-        self.lbl_output_path = ttk.Label(main_frame, text="No output path selected")
-        self.lbl_output_path.grid(row=3, column=0, columnspan=2, sticky=tk.W)
+        self.lbl_selected_file = ttk.Label(file_frame, 
+                                        text="No file selected", 
+                                        foreground="#7f8c8d")
+        self.lbl_selected_file.grid(row=2, column=0, sticky=tk.W, pady=(5, 15))
 
-        # Status and actions
-        self.btn_transcribe = ttk.Button(main_frame, text="Transcribe", command=self.start_transcription, state=tk.DISABLED)
-        self.btn_transcribe.grid(row=4, column=0, columnspan=2, pady=10)
+        # Output section
+        output_frame = ttk.Frame(content_frame)
+        output_frame.pack(fill=tk.X, pady=10)
 
-        self.lbl_status = ttk.Label(main_frame, text="Status: Ready")
-        self.lbl_status.grid(row=5, column=0, columnspan=2, sticky=tk.W)
+        ttk.Label(output_frame, 
+                text="2. Save Transcription As:", 
+                font=('Segoe UI', 11, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=5)
+
+        self.btn_choose_output = ttk.Button(output_frame, 
+                                        text="Choose Save Location", 
+                                        command=self.choose_output)
+        self.btn_choose_output.grid(row=1, column=0, sticky="ew", ipadx=20)
+
+        self.lbl_output_path = ttk.Label(output_frame, 
+                                        text="No location selected", 
+                                        foreground="#7f8c8d")
+        self.lbl_output_path.grid(row=2, column=0, sticky=tk.W, pady=(5, 15))
+
+        # Progress section
+        progress_frame = ttk.Frame(content_frame)
+        progress_frame.pack(fill=tk.X, pady=20)
+
+        self.btn_transcribe = ttk.Button(progress_frame, 
+                                        text="Start Transcription", 
+                                        command=self.start_transcription, 
+                                        state=tk.DISABLED)
+        self.btn_transcribe.pack(pady=10, ipadx=30, fill=tk.X)
+ 
+        self.lbl_status = ttk.Label(progress_frame, 
+                                text="Status: Ready to begin", 
+                                style='Status.TLabel')
+        self.lbl_status.pack()
 
         # Configure grid weights
+        for frame in [file_frame, output_frame, progress_frame]:
+            frame.columnconfigure(0, weight=1)
+            frame.rowconfigure(1, weight=1)  # For button rows
+
+        # Make main content frame responsive
         main_frame.columnconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=0)
+        main_frame.rowconfigure(0, weight=1)
 
     def init_paths(self):
         """ Initialize the paths for the required files """
@@ -64,33 +150,34 @@ class WhisperTranscriber:
     def verify_setup(self):
         """ Verify if the required files are present """
         if not os.path.exists(self.model_path):
-            self.lbl_status.config(text="Model not found")
+            self.update_status("Model not found")
             self.download_model()
 
         if not os.path.exists(self.main_executable):
-            self.lbl_status.config(text="Whisper not found")
+            self.update_status("Whisper not found")
             self.build_whisper()
 
         if not os.path.exists(self.ffmpeg_path):
-            self.lbl_status.config(text="FFmpeg not found")
+            self.update_status("FFmpeg not found")
 
     def download_model(self):
         """ Download the required model """
         if messagebox.askyesno(
             "Model not found", "Model not found. Do you want to download it?"
         ):
-            self.lbl_status.config(text="Downloading model...")
+            self.update_status("Downloading model...")
             subprocess.run(
                 f"cd {self.whisper_path} && {self.download_model_command_path} {self.model}",
                 shell=True,
             )
+            self.update_status("Model downloaded successfully")
 
     def build_whisper(self):
         """ Build the whisper executable """
         if messagebox.askyesno(
             "Whisper not found", "Whisper not found. Do you want to build it?"
         ):
-            self.lbl_status.config(text="Building Whisper...")
+            self.update_status("Building Whisper...")
             subprocess.run(
                 f"cd {self.whisper_path} && cmake -B build && cmake --build build --config Release ",
                 shell=True,
@@ -202,7 +289,7 @@ class WhisperTranscriber:
 
     def update_status(self, message: str):
         """ Update the status label with the given message """
-        self.root.after(0, self.lbl_status.config, {"text": message})
+        self.root.after(0, self.lbl_status.config, {"text":f"Status: {message}"})
 
 
 
