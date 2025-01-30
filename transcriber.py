@@ -1,6 +1,7 @@
 import os
 import subprocess
 import tkinter as tk
+from enum import Enum
 from tkinter import filedialog, messagebox, Tk, ttk
 from threading import Thread
 
@@ -8,6 +9,23 @@ MODEL_CONFIG = {
     "name": "base",
     "language": "ro",
 }
+
+class  ModelStatus(Enum): 
+    Ready = 0
+    ModelNotFound = 1
+    WhisperNotFound = 2
+    FFmpegNotFound = 3
+
+def status_to_str(status: ModelStatus) -> str:
+    if status == ModelStatus.Ready:
+        return "Ready to begin"
+    if status == ModelStatus.ModelNotFound:
+        return "Model not found"
+    if status == ModelStatus.WhisperNotFound:
+        return "Whisper executable not found"
+    if status == ModelStatus.FFmpegNotFound:
+        return "FFmpeg not found"
+
 
 class WhisperTranscriber:
     def __init__(self, base_path: str):
@@ -27,15 +45,15 @@ class WhisperTranscriber:
         self.main_executable = os.path.join(self.whisper_path, "build", "bin", "Release", "whisper-cli.exe")
         self.download_model_command_path = os.path.join(self.whisper_path, "models", "download-ggml-model.cmd")
 
-    def verify_setup(self):
+    def verify_setup(self) -> ModelStatus:
         """Verify if the required files are present"""
         if not os.path.exists(self.model_path):
-            return "Model not found"
+            return ModelStatus.ModelNotFound
         if not os.path.exists(self.main_executable):
-            return "Whisper not found"
+            return ModelStatus.WhisperNotFound
         if not os.path.exists(self.ffmpeg_path):
-            return "FFmpeg not found"
-        return "Ready"
+            return ModelStatus.FFmpegNotFound
+        return ModelStatus.Ready
 
     def download_model(self):
         """Download the required model"""
@@ -95,7 +113,25 @@ class TranscriberGUI:
         self.transcriber = transcriber
         self.root.title("Romanian Audio Transcriber")
         self.create_widgets()
-        self.update_status(self.transcriber.verify_setup())
+
+        self.check_status()
+
+
+    def check_status(self):
+        self.update_status(status_to_str(self.transcriber.verify_setup()))
+        status = self.transcriber.verify_setup()
+        if status == ModelStatus.ModelNotFound:
+            if messagebox.askyesno("Error", "Model not found. Do you want to download it?"):
+                self.update_status("Downloading model...")
+                self.transcriber.download_model()
+                self.update_status("Model downloaded.")
+        elif status == ModelStatus.WhisperNotFound:
+            if messagebox.askyesno("Error", "Whisper executable not found."):
+                self.update_status("Building whisper...")
+                self.transcriber.build_whisper()
+                self.update_status("Whisper built.")
+        elif status == ModelStatus.FFmpegNotFound:
+             messagebox.showerror("Error", "FFmpeg not found. Please check vendor directory.")
 
     def create_widgets(self):
         """Create GUI components with modern blue theme"""
@@ -294,4 +330,4 @@ class TranscriberGUI:
 
     def update_status(self, message: str):
         """Update the status label with the given message"""
-        self.root.after(0, self.lbl_status.config, {"text": message})
+        self.root.after(0, self.lbl_status.config, {"text": f"Status: {message}"})
