@@ -127,17 +127,24 @@ class TranscriberGUI:
         self.update_status(status_to_str(self.transcriber.verify_setup()))
         status = self.transcriber.verify_setup()
         if status == ModelStatus.ModelNotFound:
+            self.update_status("Downloading model...")
             if messagebox.askyesno("Error", "Model not found. Do you want to download it?"):
-                self.update_status("Downloading model...")
+                self.root.update_idletasks()
                 self.transcriber.download_model()
                 self.update_status("Model downloaded.")
         elif status == ModelStatus.WhisperNotFound:
-            if messagebox.askyesno("Error", "Whisper executable not found."):
-                self.update_status("Building whisper...")
+            self.update_status("Building whisper...")
+            if messagebox.askyesno("Error", "Whisper executable not found. Do you want to build it?"):
+                self.root.update_idletasks()
                 self.transcriber.build_whisper()
                 self.update_status("Whisper built.")
         elif status == ModelStatus.FFmpegNotFound:
+             self.update_status("Building whisper...")
              messagebox.showerror("Error", "FFmpeg not found. Please check vendor directory.")
+        else:
+            self.update_status("Ready to begin")
+            return
+        self.check_status()
 
     def create_widgets(self):
         """Create GUI components with modern blue theme"""
