@@ -39,7 +39,7 @@ class WhisperTranscriber:
     def init_paths(self):
         """Initialize the paths for the required files"""
         self.whisper_path = os.path.join(self.base_path, "whisper.cpp")
-        
+
         self.model = MODEL_CONFIG["name"]
 
         self.model_path = os.path.join(self.whisper_path, "models", f"ggml-{self.model}.bin")
@@ -51,7 +51,7 @@ class WhisperTranscriber:
         else:
             self.main_executable = os.path.join(self.whisper_path, "build", "bin", "whisper-cli")
             self.download_model_command_path = os.path.join(self.whisper_path, "models", "download-ggml-model.sh")
-            self.ffmpeg_path = os.path.join(self.base_path, "vendor", "ffmpeg", "ffmpeg")
+            self.ffmpeg_path = "ffmpeg"
 
     def verify_setup(self) -> ModelStatus:
         """Verify if the required files are present"""
@@ -335,7 +335,8 @@ class TranscriberGUI:
             self.transcriber.save_results(transcription)
 
             self.update_status("Transcription complete!")
-            os.startfile(self.transcriber.output_file)
+            if platform.system() == "Windows":
+                os.startfile(self.transcriber.output_file)
 
         except Exception as e:
             messagebox.showerror("Error", str(e))

@@ -16,7 +16,6 @@ A desktop application for transcribing Romanian audio files to text using whispe
 - [TODO](#-todo)
 - [License](#-license)
 
-
 ## 📂 Project Structure
 
 `romanian-audio-transcriber`
@@ -49,6 +48,7 @@ A desktop application for transcribing Romanian audio files to text using whispe
 
 - **CMake 3.25+** (Required for building whisper.cpp)
 - Python 3.12+
+- Ffmpeg (if on Linux)
 - C++ Compiler:
   - Windows: Visual Studio Build Tools
   - Linux: gcc/g++
