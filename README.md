@@ -43,6 +43,8 @@ Has GPU suppport for faster transcribing.
 ## 🛠️ Prerequisites
 
 - Python 3.12+
+- (Optional) NVIDIA GPU supporting CUDA 12 and cuDDN 9
+
 
 ## 🚀 Installation & Build
 
