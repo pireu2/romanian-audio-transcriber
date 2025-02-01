@@ -1,4 +1,5 @@
 import os
+import re
 import tkinter as tk
 from tkinter import filedialog, messagebox, Tk, ttk
 from threading import Thread
@@ -76,9 +77,27 @@ class WhisperTranscriber:
 
     def save_results(self, text: str):
         """Save transcription to output file"""
- 
         with open(self.output_file, "w", encoding="utf-8") as f:
-            f.write(text)
+            f.write(self.post_process(text))
+
+    def post_process(self, text: str) -> str:
+        """
+        Post-process the text to remove unnecessary newlines and ensure
+        newlines only appear after . ! ?
+        """
+        # Step 1: Replace all newlines with spaces
+        text = text.replace("\n", " ")
+
+        # Step 2: Add newlines after . ! ?
+        text = re.sub(r"([.!?])", r"\1\n", text)
+
+        # Step 3: Remove extra spaces around newlines
+        text = re.sub(r"\s*\n\s*", "\n", text)
+
+        # Step 4: Remove leading/trailing whitespace
+        text = text.strip()
+
+        return text
 
 
 class TranscriberGUI:
