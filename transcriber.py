@@ -1,9 +1,9 @@
 import os
 import re
 import tkinter as tk
+from multiprocessing import cpu_count
 from tkinter import filedialog, messagebox, Tk, ttk
 from threading import Thread
-
 from faster_whisper import WhisperModel
 
 MODEL_CONFIG = {
@@ -27,11 +27,9 @@ class WhisperTranscriber:
     def __init__(self, base_path: str):
         self.base_path = base_path
         self.file_path = ""
-        self.temp_file = ""
         self.output_file = ""
         self.model = None
-        self. model_download_root = os.path.join(self.base_path, MODEL_CONFIG["path"])
-
+        self.model_download_root = os.path.join(self.base_path, MODEL_CONFIG["path"])
 
     def load_model(self, callback=None):
         """Initialize the Whisper model"""
@@ -48,13 +46,15 @@ class WhisperTranscriber:
             if callback:
                 callback("Downloading model files...")
 
+        num_threads = self.get_thread_count()
+
         self.model = WhisperModel(
             MODEL_CONFIG["name"],
             device="auto",
+            cpu_threads=num_threads,
             compute_type="int8",
             download_root=self.model_download_root,
             local_files_only=local_files,
-
         )
         if callback:
             callback("Model loaded successfully")
@@ -65,15 +65,16 @@ class WhisperTranscriber:
         transcription_lines = []
         segments, info = self.model.transcribe(self.file_path, beam_size=8)
 
-        print("Detected language '%s' with probability %f" %
-              (info.language, info.language_probability))
+        print(
+            "Detected language '%s' with probability %f"
+            % (info.language, info.language_probability)
+        )
         for segment in segments:
             text_line = segment.text.strip()
             transcription_lines.append(text_line)
 
             print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
         return "\n".join(transcription_lines)
-
 
     def save_results(self, text: str):
         """Save transcription to output file"""
@@ -99,6 +100,12 @@ class WhisperTranscriber:
 
         return text
 
+    def get_thread_count(self) -> int:
+        """
+        Get the number of threads to use
+        """
+        return os.cpu_count() or cpu_count()
+
 
 class TranscriberGUI:
     def __init__(self, root: Tk, transcriber: WhisperTranscriber):
@@ -107,7 +114,6 @@ class TranscriberGUI:
         self.root.title("Romanian Audio Transcriber")
         self.create_widgets()
         self.start_model_loading_thread()
-
 
     def create_widgets(self):
         """Create GUI components with modern blue theme"""
@@ -159,35 +165,41 @@ class TranscriberGUI:
             "Status.TLabel", font=("Segoe UI", 10, "italic"), foreground=accent_color
         )
 
-        style.configure("Custom.TCombobox",
-                        fieldbackground=secondary_color,
-                        background=secondary_color,
-                        foreground=text_color,
-                        selectbackground=accent_color,
-                        selectforeground=text_color,
-                        borderwidth=1,
-                        bordercolor=accent_color,
-                        arrowsize=12,
-                        arrowcolor=text_color,
-                        padding=5,
-                        font=("Segoe UI", 11))
+        style.configure(
+            "Custom.TCombobox",
+            fieldbackground=secondary_color,
+            background=secondary_color,
+            foreground=text_color,
+            selectbackground=accent_color,
+            selectforeground=text_color,
+            borderwidth=1,
+            bordercolor=accent_color,
+            arrowsize=12,
+            arrowcolor=text_color,
+            padding=5,
+            font=("Segoe UI", 11),
+        )
 
-        style.map("Custom.TCombobox",
-                fieldbackground=[("readonly", secondary_color)],
-                background=[("readonly", secondary_color)],
-                bordercolor=[("focus", accent_color), ("!focus", accent_color)],
-                lightcolor=[("focus", accent_color), ("!focus", accent_color)],
-                darkcolor=[("focus", accent_color), ("!focus", accent_color)])
+        style.map(
+            "Custom.TCombobox",
+            fieldbackground=[("readonly", secondary_color)],
+            background=[("readonly", secondary_color)],
+            bordercolor=[("focus", accent_color), ("!focus", accent_color)],
+            lightcolor=[("focus", accent_color), ("!focus", accent_color)],
+            darkcolor=[("focus", accent_color), ("!focus", accent_color)],
+        )
 
         # Configure the combobox popdown style
-        style.configure("Custom.TCombobox.Listbox",
-                        background=background_color,
-                        foreground=primary_color,
-                        selectbackground=accent_color,
-                        selectforeground=text_color,
-                        borderwidth=1,
-                        relief="flat",
-                        font=("Segoe UI", 11))
+        style.configure(
+            "Custom.TCombobox.Listbox",
+            background=background_color,
+            foreground=primary_color,
+            selectbackground=accent_color,
+            selectforeground=text_color,
+            borderwidth=1,
+            relief="flat",
+            font=("Segoe UI", 11),
+        )
 
         # Main container
         background = ttk.Frame(self.root)
@@ -221,11 +233,10 @@ class TranscriberGUI:
             textvariable=self.model_var,
             values=MODELS,
             state="readonly",
-            style="Custom.TCombobox"
+            style="Custom.TCombobox",
         )
         self.model_combobox.grid(row=1, column=0, sticky="ew", pady=5)
         self.model_combobox.bind("<<ComboboxSelected>>", self.on_model_selected)
-
 
         # File selection section
         file_frame = ttk.Frame(content_frame)
@@ -304,21 +315,28 @@ class TranscriberGUI:
             filetypes=[("Audio Files", "*.wav *.mp3 *.ogg *.m4a")]
         )
         if self.transcriber.file_path:
-            self.lbl_selected_file.config(text=os.path.basename(self.transcriber.file_path))
-            self.transcriber.output_file = os.path.splitext(self.transcriber.file_path)[0] + ".txt"
-            self.transcriber.temp_file = os.path.splitext(self.transcriber.file_path)[0] + ".wav"
+            self.lbl_selected_file.config(
+                text=os.path.basename(self.transcriber.file_path)
+            )
+            self.transcriber.output_file = (
+                os.path.splitext(self.transcriber.file_path)[0] + ".txt"
+            )
             self.lbl_output_path.config(text=self.transcriber.output_file)
             self.check_ready_state()
 
     def choose_output(self):
         """Handle output file selection"""
-        initial_file = os.path.basename(self.transcriber.file_path) if self.transcriber.file_path else ""
+        initial_file = (
+            os.path.basename(self.transcriber.file_path)
+            if self.transcriber.file_path
+            else ""
+        )
         initial_file = os.path.splitext(initial_file)[0] + ".txt"
 
         self.transcriber.output_file = filedialog.asksaveasfilename(
             defaultextension=".txt",
             filetypes=[("Text Files", "*.txt")],
-            initialfile=initial_file
+            initialfile=initial_file,
         )
 
         if self.transcriber.output_file:
@@ -362,7 +380,6 @@ class TranscriberGUI:
             self.update_status("Error occurred")
         finally:
             self.root.after(0, lambda: self.btn_transcribe.config(state=tk.NORMAL))
-
 
     def update_status(self, message: str):
         """Update the status label with the given message"""
