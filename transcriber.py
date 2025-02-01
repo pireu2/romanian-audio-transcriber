@@ -1,31 +1,29 @@
 import os
 import subprocess
 import platform
+
 import tkinter as tk
 from enum import Enum
 from tkinter import filedialog, messagebox, Tk, ttk
 from threading import Thread
 
+from faster_whisper import WhisperModel
+
 MODEL_CONFIG = {
     "name": "base",
     "language": "ro",
+    "path": "models",
 }
 
-class  ModelStatus(Enum): 
-    Ready = 0
-    ModelNotFound = 1
-    WhisperNotFound = 2
-    FFmpegNotFound = 3
-
-def status_to_str(status: ModelStatus) -> str:
-    if status == ModelStatus.Ready:
-        return "Ready to begin"
-    if status == ModelStatus.ModelNotFound:
-        return "Model not found"
-    if status == ModelStatus.WhisperNotFound:
-        return "Whisper executable not found"
-    if status == ModelStatus.FFmpegNotFound:
-        return "FFmpeg not found"
+MODELS = [
+    "tiny",
+    "nbase"
+    "small",
+    "medium",
+    "large",
+    "large-v2",
+    "large-v3",
+]
 
 
 class WhisperTranscriber:
@@ -34,87 +32,58 @@ class WhisperTranscriber:
         self.file_path = ""
         self.temp_file = ""
         self.output_file = ""
-        self.init_paths()
+        self.model = None
+        self. model_download_root = os.path.join(self.base_path, MODEL_CONFIG["path"])
 
-    def init_paths(self):
+
+    def load_model(self, callback=None):
         """Initialize the paths for the required files"""
-        self.whisper_path = os.path.join(self.base_path, "whisper.cpp")
 
-        self.model = MODEL_CONFIG["name"]
+        local_files = False
 
-        self.model_path = os.path.join(self.whisper_path, "models", f"ggml-{self.model}.bin")
+        if os.path.exists(self.model_download_root):
+            for file in os.listdir(self.model_download_root):
+                if MODEL_CONFIG["name"] in file:
+                    local_files = True
+                    if callback:
+                        callback("Local model files deceted. Loading model...")
+                    break
+            if callback:
+                callback("Downloading model files...")
 
-        if platform.system() == "Windows":
-            self.main_executable = os.path.join(self.whisper_path, "build", "bin", "Release", "whisper-cli.exe")
-            self.download_model_command_path = os.path.join(self.whisper_path, "models", "download-ggml-model.cmd")
-            self.ffmpeg_path = os.path.join(self.base_path, "vendor", "ffmpeg", "ffmpeg.exe")
-        else:
-            self.main_executable = os.path.join(self.whisper_path, "build", "bin", "whisper-cli")
-            self.download_model_command_path = os.path.join(self.whisper_path, "models", "download-ggml-model.sh")
-            self.ffmpeg_path = "ffmpeg"
+        self.model = WhisperModel(
+            MODEL_CONFIG["name"],
+            device="auto",
+            compute_type="int8",
+            download_root=self.model_download_root,
+            local_files_only=local_files,
 
-    def verify_setup(self) -> ModelStatus:
-        """Verify if the required files are present"""
-        if not os.path.exists(self.model_path):
-            return ModelStatus.ModelNotFound
-        if not os.path.exists(self.main_executable):
-            return ModelStatus.WhisperNotFound
-        if not os.path.exists(self.ffmpeg_path):
-            return ModelStatus.FFmpegNotFound
-        return ModelStatus.Ready
-
-    def download_model(self):
-        """Download the required model"""
-
-        subprocess.run(
-            f"cd {self.whisper_path} && {self.download_model_command_path} {self.model}",
-            shell=True,
         )
-
-    def build_whisper(self):
-        """Build the whisper executable"""
-        subprocess.run(
-            f"cd {self.whisper_path} && cmake -B build && cmake --build build --config Release",
-            shell=True,
-        )
-
-    def convert_to_wav(self):
-        """Convert input file to WAV format"""
-        cmd = [
-            self.ffmpeg_path,
-            "-i", self.file_path,
-            "-ar", "16000",
-            "-ac", "1",
-            "-af", "highpass=f=150,lowpass=f=2800,afftdn=nf=-20",
-            "-c:a", "pcm_s16le",
-            "-y", self.temp_file
-        ]
-        subprocess.run(cmd, check=True, capture_output=True)
+        if callback:
+            callback("Model loaded successfully")
 
     def run_whisper(self) -> str:
         """Run whisper.cpp and return transcription"""
-        cmd = [
-            self.main_executable,
-            "-m", self.model_path,
-            "-f", self.temp_file,
-            "-l", MODEL_CONFIG["language"],
-            "--prompt", "Transcriere audio în limba română:",
-            "-otxt"
-        ]
-        subprocess.run(cmd, check=True, capture_output=True)
-        return open(self.temp_file + ".txt", "r", encoding="utf-8").read()
+        transcription_lines = []
+        # The transcribe method returns segments and an info object.
+        segments, info = self.model.transcribe(self.file_path, beam_size=8)
+        print("Detected language '%s' with probability %f" %
+              (info.language, info.language_probability))
+        for segment in segments:
+            # Only use the text, discarding the timestamp information.
+            text_line = segment.text.strip()
+            transcription_lines.append(text_line)
+            # Stream the text line to the console.
+
+            print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
+        return "\n".join(transcription_lines)
+
 
     def save_results(self, text: str):
         """Save transcription to output file"""
         with open(self.output_file, "w", encoding="utf-8") as f:
             f.write(text)
 
-    def cleanup_temp_files(self):
-        """Clean up temporary files"""
-        if os.path.exists(self.temp_file):
-            os.remove(self.temp_file)
-        if os.path.exists(self.temp_file + ".txt"):
-            os.remove(self.temp_file + ".txt")
 
 class TranscriberGUI:
     def __init__(self, root: Tk, transcriber: WhisperTranscriber):
@@ -122,32 +91,8 @@ class TranscriberGUI:
         self.transcriber = transcriber
         self.root.title("Romanian Audio Transcriber")
         self.create_widgets()
+        self.start_model_loading_thread()
 
-        self.check_status()
-
-
-    def check_status(self):
-        self.update_status(status_to_str(self.transcriber.verify_setup()))
-        status = self.transcriber.verify_setup()
-        if status == ModelStatus.ModelNotFound:
-            self.update_status("Downloading model...")
-            if messagebox.askyesno("Error", "Model not found. Do you want to download it?"):
-                self.root.update_idletasks()
-                self.transcriber.download_model()
-                self.update_status("Model downloaded.")
-        elif status == ModelStatus.WhisperNotFound:
-            self.update_status("Building whisper...")
-            if messagebox.askyesno("Error", "Whisper executable not found. Do you want to build it?"):
-                self.root.update_idletasks()
-                self.transcriber.build_whisper()
-                self.update_status("Whisper built.")
-        elif status == ModelStatus.FFmpegNotFound:
-             self.update_status("Building whisper...")
-             messagebox.showerror("Error", "FFmpeg not found. Please check vendor directory.")
-        else:
-            self.update_status("Ready to begin")
-            return
-        self.check_status()
 
     def create_widgets(self):
         """Create GUI components with modern blue theme"""
@@ -320,14 +265,17 @@ class TranscriberGUI:
         self.btn_transcribe.config(state=tk.DISABLED)
         Thread(target=self.transcribe).start()
 
+    def start_model_loading_thread(self):
+        """Start a thread to load (or download) the model and update status."""
+        Thread(target=self.load_model_thread, daemon=True).start()
+
+    def load_model_thread(self):
+        self.transcriber.load_model(callback=lambda msg: self.update_status(msg))
+        self.root.after(0, lambda: self.btn_transcribe.config(state=tk.NORMAL))
+
     def transcribe(self):
-        """Main transcription workflow"""
+        """Main transcription workflow."""
         try:
-            self.transcriber.cleanup_temp_files()
-
-            self.update_status("Converting audio to WAV...")
-            self.transcriber.convert_to_wav()
-
             self.update_status("Transcribing audio...")
             transcription = self.transcriber.run_whisper()
 
@@ -335,15 +283,14 @@ class TranscriberGUI:
             self.transcriber.save_results(transcription)
 
             self.update_status("Transcription complete!")
-            if platform.system() == "Windows":
-                os.startfile(self.transcriber.output_file)
+            os.startfile(self.transcriber.output_file)
 
         except Exception as e:
             messagebox.showerror("Error", str(e))
             self.update_status("Error occurred")
         finally:
-            self.transcriber.cleanup_temp_files()
             self.root.after(0, lambda: self.btn_transcribe.config(state=tk.NORMAL))
+
 
     def update_status(self, message: str):
         """Update the status label with the given message"""

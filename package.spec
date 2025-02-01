@@ -3,15 +3,7 @@ block_cipher = None
 a = Analysis(
     ["main.py"],
     pathex=[],
-    binaries=[
-        (os.path.join("vendor", "ffmpeg", "ffmpeg.exe"), "vendor/ffmpeg"),
-        (
-            os.path.join("whisper.cpp", "build", "bin", "Release", "whisper-cli.exe"),
-            "whisper.cpp/build/bin/Release",
-        ),
-    ],
     datas=[
-        (os.path.join("whisper.cpp", "models", "ggml-base.bin"), "whisper.cpp/models"),
         ("transcriber.py", "."),
     ],
     hiddenimports=[],
@@ -42,5 +34,5 @@ exe = EXE(
     runtime_tmpdir=None,
     console=False,
     onefile=True,
-    icon="icon.ico",
+    icon=os.path.join("media", "icon.ico"),
 )

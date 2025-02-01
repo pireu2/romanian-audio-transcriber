@@ -1,6 +1,6 @@
 # Romanian Audio Transcriber 🎙️➡️📝
 
-A desktop application for transcribing Romanian audio files to text using whisper.cpp and FFmpeg. Works **100% offline** .
+A desktop application for transcribing Romanian audio files to text using faster-whisper. Works **100% offline** .
 
 ![App Screenshot](media/screenshot.png)
 
@@ -22,8 +22,6 @@ A desktop application for transcribing Romanian audio files to text using whispe
 
 - `main.py` - Main entry point of the application
 - `transcriber.py` - Core transcription logic (Transcriber class) and tkinter GUI
-- `vendor/ffmpeg/ffmpeg` - FFmpeg binaries for audio processing
-- `whisper.cpp` - C++ implementation of OpenAi's whisper model
 - `package.spec` - PyInstaller configuration file
 - `requrements.txt` - Python dependencies list
 
@@ -46,19 +44,13 @@ A desktop application for transcribing Romanian audio files to text using whispe
 
 ## 🛠️ Prerequisites
 
-- **CMake 3.25+** (Required for building whisper.cpp)
 - Python 3.12+
-- Ffmpeg (if on Linux)
-- C++ Compiler:
-  - Windows: Visual Studio Build Tools
-  - Linux: gcc/g++
-  - macOS: Xcode Command Line Tools
 
 ## 🚀 Installation & Build
 
 ```bash
 # 1. Clone with submodules
-git clone --recurse-submodules https://github.com/pireu2/romanian-audio-transcriber.git
+git clone https://github.com/pireu2/romanian-audio-transcriber.git
 cd romanian-audio-transcriber
 
 # 3. Install Python dependencies if you want to deploy the application
@@ -117,8 +109,6 @@ pyinstaller package.spec
 Output executable located in /dist with:
 
 - Complete Romanian language support
-- Embedded FFmpeg binaries
-- Selected whisper.cpp model
 
 ## ✅ TODO
 
