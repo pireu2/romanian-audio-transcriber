@@ -1,9 +1,5 @@
 import os
-import subprocess
-import platform
-
 import tkinter as tk
-from enum import Enum
 from tkinter import filedialog, messagebox, Tk, ttk
 from threading import Thread
 
@@ -17,7 +13,7 @@ MODEL_CONFIG = {
 
 MODELS = [
     "tiny",
-    "nbase"
+    "base",
     "small",
     "medium",
     "large",
@@ -37,7 +33,7 @@ class WhisperTranscriber:
 
 
     def load_model(self, callback=None):
-        """Initialize the paths for the required files"""
+        """Initialize the Whisper model"""
 
         local_files = False
 
@@ -64,16 +60,15 @@ class WhisperTranscriber:
 
     def run_whisper(self) -> str:
         """Run whisper.cpp and return transcription"""
+
         transcription_lines = []
-        # The transcribe method returns segments and an info object.
         segments, info = self.model.transcribe(self.file_path, beam_size=8)
+
         print("Detected language '%s' with probability %f" %
               (info.language, info.language_probability))
         for segment in segments:
-            # Only use the text, discarding the timestamp information.
             text_line = segment.text.strip()
             transcription_lines.append(text_line)
-            # Stream the text line to the console.
 
             print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
         return "\n".join(transcription_lines)
@@ -81,6 +76,7 @@ class WhisperTranscriber:
 
     def save_results(self, text: str):
         """Save transcription to output file"""
+ 
         with open(self.output_file, "w", encoding="utf-8") as f:
             f.write(text)
 
@@ -144,6 +140,36 @@ class TranscriberGUI:
             "Status.TLabel", font=("Segoe UI", 10, "italic"), foreground=accent_color
         )
 
+        style.configure("Custom.TCombobox",
+                        fieldbackground=secondary_color,
+                        background=secondary_color,
+                        foreground=text_color,
+                        selectbackground=accent_color,
+                        selectforeground=text_color,
+                        borderwidth=1,
+                        bordercolor=accent_color,
+                        arrowsize=12,
+                        arrowcolor=text_color,
+                        padding=5,
+                        font=("Segoe UI", 11))
+
+        style.map("Custom.TCombobox",
+                fieldbackground=[("readonly", secondary_color)],
+                background=[("readonly", secondary_color)],
+                bordercolor=[("focus", accent_color), ("!focus", accent_color)],
+                lightcolor=[("focus", accent_color), ("!focus", accent_color)],
+                darkcolor=[("focus", accent_color), ("!focus", accent_color)])
+
+        # Configure the combobox popdown style
+        style.configure("Custom.TCombobox.Listbox",
+                        background=background_color,
+                        foreground=primary_color,
+                        selectbackground=accent_color,
+                        selectforeground=text_color,
+                        borderwidth=1,
+                        relief="flat",
+                        font=("Segoe UI", 11))
+
         # Main container
         background = ttk.Frame(self.root)
         background.pack(fill=tk.BOTH, expand=True)
@@ -161,6 +187,26 @@ class TranscriberGUI:
         # Content section
         content_frame = ttk.Frame(main_frame)
         content_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Model selection section
+        model_frame = ttk.Frame(content_frame)
+        model_frame.pack(fill=tk.X, pady=10)
+
+        ttk.Label(
+            model_frame, text="Change Model:", font=("Segoe UI", 11, "bold")
+        ).grid(row=0, column=0, sticky=tk.W, pady=5)
+
+        self.model_var = tk.StringVar(value=MODEL_CONFIG["name"])
+        self.model_combobox = ttk.Combobox(
+            model_frame,
+            textvariable=self.model_var,
+            values=MODELS,
+            state="readonly",
+            style="Custom.TCombobox"
+        )
+        self.model_combobox.grid(row=1, column=0, sticky="ew", pady=5)
+        self.model_combobox.bind("<<ComboboxSelected>>", self.on_model_selected)
+
 
         # File selection section
         file_frame = ttk.Frame(content_frame)
@@ -218,13 +264,20 @@ class TranscriberGUI:
         self.lbl_status.pack()
 
         # Configure grid weights
-        for frame in [file_frame, output_frame, progress_frame]:
+        for frame in [model_frame, file_frame, output_frame, progress_frame]:
             frame.columnconfigure(0, weight=1)
             frame.rowconfigure(1, weight=1)  # For button rows
 
         # Make main content frame responsive
         main_frame.columnconfigure(0, weight=1)
         main_frame.rowconfigure(0, weight=1)
+
+    def on_model_selected(self, event):
+        """Handle model selection event"""
+        selected_model = self.model_var.get()
+        MODEL_CONFIG["name"] = selected_model
+        self.btn_transcribe.config(state=tk.DISABLED)
+        self.start_model_loading_thread()
 
     def select_file(self):
         """Handle audio file selection"""
